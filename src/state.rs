@@ -51,3 +51,13 @@
 //         }));
 //     }
 // }
+
+// #[derive(Debug)]
+// enum Size {
+//     Variant1,
+//     Variant2,
+// }
+
+// struct DisplayState<T> {
+//     values: [T; 5],
+// }

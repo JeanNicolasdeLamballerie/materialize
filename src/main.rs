@@ -1,7 +1,7 @@
 pub mod state;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{BuildStreamError, Data, Sample, SampleFormat};
+use cpal::{BuildStreamError, Data, Sample, SampleFormat, SampleRate};
 use ggez::mint::Point2;
 use native_windows_gui as nwg;
 use rustfft::num_complex::Complex32;
@@ -116,18 +116,19 @@ fn main() -> GameResult {
     }
     .unwrap();
     stream.play().unwrap();
-    println!("start...");
-    std::thread::sleep(std::time::Duration::from_secs(3));
-    println!("start...");
-    drop(stream);
-    let r = reader.lock().unwrap();
-    let min = r.min;
-    let max = r.max;
+
+    // println!("start...");
+    // std::thread::sleep(std::time::Duration::from_secs(3));
+    // println!("start...");
+    // drop(stream);
+    // let r = reader.lock().unwrap();
+    // let min = r.min;
+    // let max = r.max;
     // let max = reader.max;
-    println!(
-        "{} - {} || {} - {} ",
-        min, max, r.results_count, r.sample_count
-    );
+    // println!(
+    //     "{} - {} || {} - {} ",
+    //     min, max, r.results_count, r.sample_count
+    // );
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
     println!("{}", r.points.len());
@@ -168,92 +169,96 @@ fn main() -> GameResult {
         // initial_state: "",
         terminal_display: false,
     };
-    let c = r.points.clone();
-    let b = c.clone();
-    println!("Start : {} --- {}", c.len(), r.points.len());
-    println!("Hello, world!");
+
     println!("Main device : {}", device.name().unwrap());
-    let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(12000);
-    // fft.
-    let mut buffer = vec![];
-    println!("{:?}", b[0]);
-    for point in b {
-        buffer.push(Complex32::new(point.x, point.y));
-    }
-    println!("{}", buffer[0]);
-    fft.process(&mut buffer);
-    println!("{}", buffer[0]);
+    // let mut planner = FftPlanner::new();
+    // let fft = planner.plan_fft_forward(12000);
+    // // fft.
+    // let mut buffer = vec![];
+    // println!("{:?}", b[0]);
+    // for point in b {
+    //     buffer.push(Complex32::new(point.x, point.y));
+    // }
+    // println!("{}", buffer[0]);
+    // fft.process(&mut buffer);
+    // println!("{}", buffer[0]);
 
-    let fft_values = to_points(&buffer);
-    let fc = fft_values.clone();
-    let (mut min_x, mut max_x) = (f32::MAX, f32::MIN);
-    let (mut min_y, mut max_y) = (f32::MAX, f32::MIN);
-    for val in fc {
-        // 1 point uncertainty (if min === max, we get default value; but it avoids a bunch of
-        //   overhead)
-        if val.x < min_x {
-            min_x = val.x
-        }
-        if val.x > max_x {
-            max_x = val.x
-        }
-        if val.y < min_y {
-            min_y = val.y
-        }
-        if val.y > max_y {
-            max_y = val.y
-        }
-    }
-    println!("sample : {}", sample_rate.0);
-    let mut ic: Vec<_> = c.iter().map(|x| return x.y).collect();
-    _ = ic.split_off(16384);
-    println!("{}", ic.len());
-    let res = samples_fft_to_spectrum(
-        &ic,
-        sample_rate.0,
-        FrequencyLimit::All,
-        // Recommended scaling/normalization by `rustfft`.
-        Some(&divide_by_N_sqrt),
-    )
-    .unwrap();
-    let mapval = res.to_map();
-    let l = mapval.len();
-    let mut v: Vec<Vec<f32>> = vec![vec![], vec![], vec![], vec![], vec![]];
-    for (&key, value) in mapval.iter() {
-        if key < (l / 5) as u32 {
-            v[0].push(*value)
-        } else if ((l / 5_usize) as u32) < key && key < ((2 * l / 5_usize) as u32) {
-            v[1].push(*value)
-        } else if ((2 * l / 5_usize) as u32) < key && key < ((3 * l / 5_usize) as u32) {
-            v[2].push(*value)
-        } else if ((3 * l / 5_usize) as u32) < key && key < ((4 * l / 5_usize) as u32) {
-            v[3].push(*value)
-        } else {
-            v[4].push(*value)
-        }
-        //println!("key : {} - value : {}", key, value);
-    }
-    let mut useless_counter = 0;
-    for vector in v {
-        useless_counter += 1;
-        // let mut sum: f32 = 0.0;
+    // let fft_values = to_points(&buffer);
+    // let fc = fft_values.clone();
+    // let (mut min_x, mut max_x) = (f32::MAX, f32::MIN);
+    // let (mut min_y, mut max_y) = (f32::MAX, f32::MIN);
+    // for val in fc {
+    //     // 1 point uncertainty (if min === max, we get default value; but it avoids a bunch of
+    //     //   overhead)
+    //     if val.x < min_x {
+    //         min_x = val.x
+    //     }
+    //     if val.x > max_x {
+    //         max_x = val.x
+    //     }
+    //     if val.y < min_y {
+    //         min_y = val.y
+    //     }
+    //     if val.y > max_y {
+    //         max_y = val.y
+    //     }
+    // }
+    // println!("sample : {}", sample_rate.0);
+    // let mut ic: Vec<_> = c.iter().map(|x| return x.y).collect();
+    // _ = ic.split_off(16384);
+    // println!("{}", ic.len());
+    // let res = samples_fft_to_spectrum(
+    //     &ic,
+    //     sample_rate.0,
+    //     FrequencyLimit::All,
+    //     // Recommended scaling/normalization by `rustfft`.
+    //     Some(&divide_by_N_sqrt),
+    // )
+    // .unwrap();
+    // let mapval = res.to_map();
+    // let l = mapval.len();
+    // let mut v: Vec<Vec<f32>> = vec![vec![], vec![], vec![], vec![], vec![]];
+    // for (&key, value) in mapval.iter() {
+    //     if key < (l / 5) as u32 {
+    //         v[0].push(*value)
+    //     } else if ((l / 5_usize) as u32) < key && key < ((2 * l / 5_usize) as u32) {
+    //         v[1].push(*value)
+    //     } else if ((2 * l / 5_usize) as u32) < key && key < ((3 * l / 5_usize) as u32) {
+    //         v[2].push(*value)
+    //     } else if ((3 * l / 5_usize) as u32) < key && key < ((4 * l / 5_usize) as u32) {
+    //         v[3].push(*value)
+    //     } else {
+    //         v[4].push(*value)
+    //     }
+    //     //println!("key : {} - value : {}", key, value);
+    // }
+    // let mut useless_counter = 0;
+    // for vector in v {
+    //     useless_counter += 1;
+    //     // let mut sum: f32 = 0.0;
 
-        // for point in vector {
-        //     sum += point
-        // }
-        let iter = vector.iter();
-        let sum = iter.fold(0_f32, |x, &x2| x + x2);
-        let mean = sum / vector.len() as f32;
-        println!(
-            "vector nr. {} : This is what we get : ({}) - [{}]",
-            useless_counter, sum, mean
-        )
-    }
+    //     // for point in vector {
+    //     //     sum += point
+    //     // }
+    //     let iter = vector.iter();
+    //     let sum = iter.fold(0_f32, |x, &x2| x + x2);
+    //     let mean = sum / vector.len() as f32;
+    //     println!(
+    //         "vector nr. {} : This is what we get : ({}) - [{}]",
+    //         useless_counter, sum, mean
+    //     )
+    // }
 
     // println!("min-max : {}, {} ||| {}, {} ", min_x, max_x, min_y, max_y);
-    let state = MainState::new(&mut ctx, cf, fft_values); //fft_values);
+    let state = MainState::new(
+        &mut ctx,
+        sample_rate,
+        cf,
+        vec![vec![0.0], vec![0.0], vec![0.0], vec![0.0]],
+        Arc::clone(&reader),
+    ); //fft_values);
     event::run(ctx, event_loop, state);
+    // drop(stream);
     // Ok(())
 }
 
@@ -281,38 +286,95 @@ where
     let mut guard = r.lock().unwrap();
     guard.results_count += 1;
     guard.add(input);
-    for (i, &sample) in input.iter().enumerate() {
-        // let reader_instance: DataCollected<T> = DataCollected::from_mutex::<T>(guard);
-        let sample: U = U::from_sample(sample);
-        guard.sample_count += 1;
-        guard.set_min_max(sample);
-    }
-
-    // guard.spectrum.p
-    guard.results_total += input.len() as f32;
+    // for (i, &sample) in input.iter().enumerate() {
+    //     // let reader_instance: DataCollected<T> = DataCollected::from_mutex::<T>(guard);
+    //     let sample: U = U::from_sample(sample);
+    //     guard.sample_count += 1;
+    //     guard.set_min_max(sample);
+    // }
+    // // guard.spectrum.p
+    // guard.results_total += input.len() as f32;
     // }
     // }
 }
-struct MainState {
-    grid: Grid,
-    values: Vec<Point2<f32>>,
-    config: Config,
+
+// TODO type archmutex data ?
+struct MainState<T> {
+    // grid: Grid,
+    values: Vec<Vec<f32>>,
+    // calculated: [f32; 5],
+    reader: Arc<Mutex<DataCollected<T>>>,
+    sample_rate: SampleRate,
+    changed: bool,
+    counter: [(f32, f32); 5],
     pos_x: f32,
 }
 // impl Into<mint::Point2<f32>>
-impl MainState {
-    fn new(_ctx: &mut Context, config: Config, values: Vec<Point2<f32>>) -> Self {
-        let grid = Grid::new(config.grid_width, config.grid_height);
+impl MainState<u8> {
+    fn new(
+        _ctx: &mut Context,
+        sample_rate: SampleRate,
+        config: Config,
+        values: Vec<Vec<f32>>,
+        reader: Arc<Mutex<DataCollected<u8>>>,
+    ) -> Self {
+        // let grid = Grid::new(config.grid_width, config.grid_height);
 
         MainState {
-            grid,
-            config,
+            // grid,
+            // config,
+            changed: true,
+            // calculated: [0.0, 0.0, 0.0, 0.0, 0.0],
+            sample_rate,
+            reader,
             values,
+            counter: [(0.0, 0.0); 5],
             pos_x: 0_f32,
         }
     }
+
+    fn sample(&mut self) {
+        // println!("sampling, sampling, SAMPLING");
+        let mut guard = self.reader.lock().unwrap();
+        if guard.points.len() < 16384 {
+            return;
+        }
+        let pts = guard.points.clone();
+        let (sl, remain) = pts.split_at(16384);
+        guard.points = remain.to_vec();
+        let res = samples_fft_to_spectrum(
+            &sl,
+            self.sample_rate.0,
+            FrequencyLimit::All,
+            // Recommended scaling/normalization by `rustfft`.
+            Some(&divide_by_N_sqrt),
+        )
+        .unwrap();
+        let mapval = res.to_map();
+        let l = mapval.len();
+        let mut v: Vec<Vec<f32>> = vec![vec![], vec![], vec![], vec![], vec![]];
+        for (&key, value) in mapval.iter() {
+            if key < (l / 5) as u32 {
+                v[0].push(*value)
+            } else if ((l / 5_usize) as u32) < key && key < ((2 * l / 5_usize) as u32) {
+                v[1].push(*value)
+            } else if ((2 * l / 5_usize) as u32) < key && key < ((3 * l / 5_usize) as u32) {
+                v[2].push(*value)
+            } else if ((3 * l / 5_usize) as u32) < key && key < ((4 * l / 5_usize) as u32) {
+                v[3].push(*value)
+            } else {
+                v[4].push(*value)
+            }
+        }
+        if guard.points.len() < 16384 {
+            guard.points = vec![];
+        }
+        self.values = v;
+        self.changed = true;
+        // println!("{:?}", self.values);
+    }
 }
-impl event::EventHandler<ggez::GameError> for MainState {
+impl event::EventHandler<ggez::GameError> for MainState<u8> {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         self.pos_x = self.pos_x + 2.0;
         Ok(())
@@ -321,13 +383,48 @@ impl event::EventHandler<ggez::GameError> for MainState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.0, 0.0, 0.0, 1.0]));
-        // let mode = DrawMode::Fill(FillOptions::DEFAULT);
-        let mode = DrawMode::Stroke(StrokeOptions::DEFAULT);
+        let mode = DrawMode::Fill(FillOptions::DEFAULT);
+        // let mode = DrawMode::Stroke(StrokeOptions::DEFAULT);
         // let t = graphics::Text::new("Hello world");
         // canvas.draw(&t, Vec2::new(0.0, 800.0));
         // let points = Vec2::new(0.0, 0.0);
         // println!("{} is the length : ", self.values.len());
-        let line = graphics::Mesh::new_polyline(ctx, mode, &self.values, Color::WHITE)?;
+        let mut x_position = 50_f32;
+        const Y_POSITION: f32 = 200_f32;
+        self.sample();
+        let mut i = 0;
+        for frequency in &self.values {
+            let iter = frequency.iter();
+            let sum = iter.fold(0_f32, |x, &x2| x + x2);
+            self.counter[i].0 = (sum / frequency.len() as f32) * 4.0;
+            // if self.counter[i].1 > self.counter[i].0 {
+            //     self.counter[i].1 -= (self.counter[i].0 - self.counter[i].1) * 100.0 * (1.0 / 125.0)
+            //     // self.counter[i].1 - 4.0
+            // } else {
+            self.counter[i].1 += (self.counter[i].0 - self.counter[i].1) * 20.0 * (1.0 / 125.0);
+
+            // TODO
+            // remove magic numbers (Speed & dt)
+
+            let rectangle = graphics::Mesh::new_rounded_rectangle(
+                ctx,
+                mode,
+                graphics::Rect::new(x_position, Y_POSITION, 100_f32, self.counter[i].1),
+                20_f32,
+                match i {
+                    0 => graphics::Color::WHITE,
+                    1 => graphics::Color::CYAN,
+                    2 => graphics::Color::RED,
+                    _ => graphics::Color::YELLOW,
+                },
+            )
+            .unwrap();
+            canvas.draw(&rectangle, Vec2::new(0_f32, -self.counter[i].1));
+
+            i += 1;
+            x_position += 160_f32;
+        }
+        // let line = graphics::Mesh::new_polyline(ctx, mode, &self.values, Color::WHITE)?;
         // let circle = graphics::Mesh::new_circle(
         //     ctx,
         //     graphics::DrawMode::fill(),
@@ -347,7 +444,6 @@ impl event::EventHandler<ggez::GameError> for MainState {
         // )?;
         // canvas.draw(&pt, Vec2::new(self.pos_x, 380.0));
         // }
-        canvas.draw(&line, Vec2::new(self.pos_x, 380.0));
 
         canvas.finish(ctx)?;
         Ok(())
@@ -388,7 +484,7 @@ struct DataCollected<U> {
     sample_count: u64,
     results_count: u64,
     results_total: f32,
-    points: Vec<Point2<f32>>,
+    points: Vec<f32>,
 }
 // impl DataCollected<u8> {
 //     fn set_min_max(&mut self, sample: u8) -> DataCollected<u8> {
@@ -468,11 +564,8 @@ impl Reader<u8, u8> for DataCollected<u8> {
         }
     }
     fn add(&mut self, samples: &[u8]) {
-        self.points.extend(samples.iter().enumerate().map(|(x, y)| {
-            return Point2 {
-                x: self.results_total + x as f32,
-                y: (*y as f32 - 128.0) * 10.0,
-            };
+        self.points.extend(samples.iter().map(|y| {
+            return *y as f32 - 128.0; // * 10 ?
         }));
     }
 }
