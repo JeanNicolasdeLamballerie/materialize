@@ -8,7 +8,14 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.81"
 cpal = "0.15.3"
+egui = "0.27.2"
+ggegui = "0.4.0"
 ggez = "0.9.3"
 native-windows-gui = "1.0.13"
-rustfft = "6.2.0"
+num-integer = "0.1.46"
 spectrum-analyzer = "1.5.0"
+windows-registry = "0.1.1"
+
+[dependencies.windows]
+version = "0.56.0"
+features = [ "Win32_Foundation", "Win32_Security", "Win32_UI_WindowsAndMessaging", "Wdk_System_OfflineRegistry"]
