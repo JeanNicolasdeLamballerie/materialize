@@ -9,7 +9,7 @@ todo
 ## State representation :
 
 <picture>
-  <source srcset="https://raw.githubusercontent.com/JeanNicolasdeLamballerie/materialize/master/.github/images/state-configuration.png">
+ 
   <img alt="State representation" src="https://raw.githubusercontent.com/JeanNicolasdeLamballerie/materialize/master/.github/images/state-configuration.png">
 </picture>
 
