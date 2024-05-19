@@ -1,10 +1,10 @@
 pub mod config;
+pub mod shapes;
 pub mod state;
 pub mod ui;
 use core::time;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Sample, SampleRate};
-use ggez::context::Has;
 use native_windows_gui as nwg;
 use spectrum_analyzer::scaling::divide_by_N_sqrt;
 use spectrum_analyzer::windows::hann_window;
@@ -14,15 +14,13 @@ use std::thread::sleep;
 use ui::UI;
 
 // // standard std exposing io methods
-// use rand::Rng;
 use ggez::glam::*;
-use ggez::graphics::{self, Canvas, Color, DrawMode, FillOptions, GraphicsContext, Text};
+use ggez::graphics::{self, Color, DrawMode, FillOptions, Text};
 use ggez::{event, ContextBuilder};
 use ggez::{Context, GameResult};
 
 use crate::config::{Configuration, UpdateStatus};
-
-const SIZE_ARR: usize = 4096 * 2;
+use crate::shapes::{spiraling, Shape, ShapeKind};
 // const VIEWED_FREQUENCIES: u32 = 2000;
 fn main() -> GameResult {
     let mut global_config = Configuration::default();
@@ -67,10 +65,7 @@ fn main() -> GameResult {
         .with_max_sample_rate();
     let sample_rate = supported_config.sample_rate();
     let config = supported_config;
-    let r = DataCollected {
-        // display: Display::new(),
-        points: vec![],
-    };
+    let r = DataCollected { points: vec![] };
     let clone_data = r.clone();
     let m = Mutex::new(clone_data);
     let reader = Arc::new(m);
@@ -133,18 +128,18 @@ fn main() -> GameResult {
         ggez::conf::WindowMode {
             transparent: false,
             visible: true,
-            resize_on_scale_factor_change: false,
+            resize_on_scale_factor_change: true,
             logical_size: None,
-            width: 2000.0,
-            height: 1000.0,
+            width: global_config.screen_size.value.0,
+            height: global_config.screen_size.value.1,
             maximized: false,
             fullscreen_type: ggez::conf::FullscreenType::Windowed,
-            borderless: false,
-            min_width: 800.0,
-            max_width: 4000.0,
-            min_height: 800.0,
-            max_height: 2000.0,
-            resizable: true,
+            borderless: true,
+            min_width: 1.0,
+            max_width: 0.0,
+            min_height: 1.0,
+            max_height: 0.0,
+            resizable: false,
         }, // .dimensions(screen_size.0, screen_size.1),
     );
     let (mut ctx, event_loop) = cb.build()?; // `?` because the build function may fail
@@ -203,12 +198,10 @@ impl MainState {
     }
 
     fn sample(&mut self) {
-        // println!("sampling, sampling, SAMPLING");
         let mut guard = self.reader.lock().unwrap();
         if guard.points.len() < self.configuration.size_arr.value {
             return;
         }
-        // println!("Config : {}", self.configuration.size_arr.value);
         let pts = guard.points.clone();
         let windowed_values = hann_window(&pts[..self.configuration.size_arr.value]);
         let (_, remain) = pts.split_at(self.configuration.size_arr.value / 2);
@@ -248,59 +241,55 @@ impl MainState {
     }
 }
 
-fn build_option_field(
-    configuration: Configuration,
-    x_position: f32,
-    ctx: &impl Has<GraphicsContext>,
-    canvas: &mut Canvas,
-) {
-    let mode = DrawMode::Fill(FillOptions::DEFAULT);
-    let mut transparent_white = Color::WHITE;
-    transparent_white.a = 0.3;
-    let rectangle_menu = graphics::Mesh::new_rounded_rectangle(
-        ctx,
-        mode,
-        graphics::Rect::new(x_position, 200.0, 1000_f32, 800.0),
-        10_f32,
-        transparent_white,
-    )
-    .unwrap();
-    let opt = graphics::Mesh::new_rounded_rectangle(
-        ctx,
-        mode,
-        graphics::Rect::new(x_position + 20.0, 220.0, 800.0, 80.0),
-        10_f32,
-        Color::BLACK,
-    )
-    .unwrap();
-    let txt = graphics::Text::new(
-        String::from("Number of items displayed : ")
-            + &configuration.number_of_items.value.to_string(),
-    );
-    canvas.draw(&rectangle_menu, [0.0, 0.0]);
-    canvas.draw(&opt, [0.0, 0.0]);
-    canvas.draw(&txt, [x_position + 40.0, 250.0]);
-}
-
 impl event::EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.pos_x = self.pos_x + 2.0;
-
         if !self.configuration.open {
             self.ui.update_menu(ctx, &mut self.configuration)?;
         }
+        // let win = ctx.gfx.window();
+        // win.set_inner_size(PhysicalSize::new(200, 200));
         Ok(())
     }
+    fn key_down_event(
+        &mut self,
+        ctx: &mut Context,
+        input: ggez::input::keyboard::KeyInput,
+        _repeated: bool,
+    ) -> Result<(), ggez::GameError> {
+        match input.keycode {
+            Some(key) => match key {
+                ggez::input::keyboard::KeyCode::Space => {
+                    self.configuration.open = !self.configuration.open;
+                    Ok(())
+                }
+                ggez::input::keyboard::KeyCode::Escape => {
+                    ctx.request_quit();
+                    Ok(())
+                }
+                _ => Ok(()),
+            },
+            _ => Ok(()),
+        }
+    }
 
+    // TODO Move sampling to updating logic
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::from([0.0, 0.0, 0.0, 1.0]));
+        // canvas.set_scissor_rect(graphics::Rect {
+        //     x: 1f32,
+        //     y: 1f32,
+        //     w: 1f32,
+        //     h: 1f32,
+        // }).ok();
+        // ctx.gfx.size();
         let mode = DrawMode::Fill(FillOptions::DEFAULT);
         let mut x_position = 50_f32;
         const Y_POSITION: f32 = 1000_f32;
 
         self.sample();
         let mut i = 0;
-
+        //  let spiral_iter = spiral::ManhattanIterator::new(self.configuration.screen_size.0/2, self.configuration.screen_size.1/2, );
         if !self.configuration.open {
             let version = String::from("v.") + &*self.configuration.version.value;
             let vers = Text::new(version);
@@ -321,7 +310,13 @@ impl event::EventHandler<ggez::GameError> for MainState {
                 .truncate(self.configuration.number_of_items.value as usize);
             //    self.counter = c;
         }
+        let shape = shapes::ShapeBuilder::new(ShapeKind::Cyclic);
+        let spiral_values = spiraling(self.values.len());
+        let mut spiral = spiral_values.iter();
         for frequency in &self.values {
+            // if let Some((x, y)) = spiral.next() {}
+            let default_pos = (0.0_f32, 0.0_f32);
+            let (x, y) = spiral.next().unwrap_or(&default_pos);
             let iter = frequency.iter();
             let mut sum = iter.fold(0_f32, |x, &x2| x + x2);
             sum = sum * self.configuration.scale.value;
@@ -335,44 +330,67 @@ impl event::EventHandler<ggez::GameError> for MainState {
             // position) * speed * dt
             //
             // Main bar (no history)
-            self.counter[i].1 += (self.counter[i].0 - self.counter[i].1) * 60.0 * (1.0 / 125.0);
+            self.counter[i].1 += (self.counter[i].0 - self.counter[i].1) * 50.0 * (1.0 / 125.0);
             // Afterimage (history, slower animation)
-            self.counter[i].2 += (self.counter[i].0 - self.counter[i].2) * 30.0 * (1.0 / 250.0);
-            if self.counter[i].2 < self.counter[i].1 {
-                self.counter[i].2 = self.counter[i].1
-            }
+            self.counter[i].2 += (self.counter[i].0 - self.counter[i].2) * 50.0 * (1.0 / 250.0);
+            // if self.counter[i].2 < self.counter[i].1 {
+            //     self.counter[i].2 = self.counter[i].1
+            // }
 
             // TODO
             // remove magic numbers (Speed & dt)
-            let mut color = match i % 4 {
+            let color = match i % 4 {
                 0 => Color::WHITE,
                 1 => Color::CYAN,
                 2 => Color::RED,
                 _ => Color::YELLOW,
             };
-            let rectangle = graphics::Mesh::new_rounded_rectangle(
-                ctx,
-                mode,
-                graphics::Rect::new(x_position, Y_POSITION, 10_f32, self.counter[i].1),
-                20_f32,
-                color,
-            )
-            .unwrap();
-            color.a = 0.1;
-            let after_image = graphics::Mesh::new_rounded_rectangle(
-                ctx,
-                mode,
-                graphics::Rect::new(x_position, Y_POSITION, 10.50_f32, self.counter[i].2),
-                20_f32,
-                color,
-            )
-            .unwrap();
-            canvas.draw(&rectangle, Vec2::new(0_f32, -self.counter[i].1));
 
-            canvas.draw(&after_image, Vec2::new(0_f32, -self.counter[i].2)); //TODO this needs to
-                                                                             //be stored & updated every frame, instead of only appearing once
+            match shape.clone() {
+                Shape::Cyclic(shape) => shape.draw(
+                    ctx,
+                    mode,
+                    color,
+                    (
+                        self.configuration.screen_size.value.0 / 2.0 + x,
+                        self.configuration.screen_size.value.1 / 2.0 + y,
+                    ),
+                    (self.counter[i].1, self.counter[i].2),
+                    &mut canvas,
+                ),
+                Shape::RoundedRectangular(shape) => shape.draw(
+                    ctx,
+                    mode,
+                    color,
+                    (x_position, Y_POSITION),
+                    (self.counter[i].1, self.counter[i].2),
+                    20.0,
+                    &mut canvas,
+                ),
+            };
+            // let rectangle = graphics::Mesh::new_rounded_rectangle(
+            //     ctx,
+            //     mode,
+            //     graphics::Rect::new(x_position, Y_POSITION, 10_f32, self.counter[i].1),
+            //     20_f32,
+            //     color,
+            // )
+            // .unwrap();
+            // color.a = 0.1;
+            // let after_image = graphics::Mesh::new_rounded_rectangle(
+            //     ctx,
+            //     mode,
+            //     graphics::Rect::new(x_position, Y_POSITION, 10.50_f32, self.counter[i].2),
+            //     20_f32,
+            //     color,
+            // )
+            // .unwrap();
+            // canvas.draw(&rectangle, Vec2::new(0_f32, -self.counter[i].1));
+
+            // canvas.draw(&after_image, Vec2::new(0_f32, -self.counter[i].2)); //TODO this needs to
+            //                                                                  //be stored & updated every frame, instead of only appearing once
             i += 1;
-            x_position += 15_f32;
+            x_position += 50_f32;
         }
         // for &val in self.values {
         // let circle = graphics::Mesh::new_circle(

@@ -3,6 +3,9 @@ use windows_registry::Key;
 
 const REGISTRY_PATH_CONFIG: &str = "SOFTWARE\\Dekharen\\materialize_config\\";
 
+//TODO Add drag and drop for a config file ?
+//
+
 pub enum UpdateStatus {
     UpToDate,
     NewerAlreadyInstalled,

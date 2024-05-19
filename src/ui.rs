@@ -13,21 +13,28 @@ impl UI {
         config: &mut crate::config::Configuration,
     ) -> GameResult {
         let gui_ctx = self.gui.ctx();
+        ctx.gfx.size();
         let options = egui::Window::new("Options");
         // options = options.min_size([800.0_f32, 800.0_f32]);
         options
-            .default_size([800.0_f32, 800.0_f32])
+            .default_size([
+                config.screen_size.value.0 / 2.0,
+                config.screen_size.value.1 / 2.0,
+            ])
+            .default_pos((
+                config.screen_size.value.0 / 4.0,
+                config.screen_size.value.1 / 4.0,
+            ))
             .resizable(false)
             .show(&gui_ctx, |ui| {
                 ui.set_width(ui.available_width());
                 ui.set_height(ui.available_height());
-                let label = ui.label("Close button");
 
                 let mut root = config.size_arr.value.ilog2(); //.nth_root(9);
                 let initial_root = root;
                 ui.add(
                     egui::Slider::new(&mut root, 9..=14)
-                        .text("size")
+                        .text("Size of sample. The bigger the number, the less frequent the update (but the more accurate)")
                         .custom_formatter(|v, _| (2_usize.pow(v as u32)).to_string()),
                 );
 
@@ -36,7 +43,7 @@ impl UI {
                 }
                 // ui.style_mut();
                 //
-
+                ui.separator();
                 ui.add(
                     egui::Slider::new(&mut config.scale.value, 0.0..=1000.0).text("scale"), // .custom_formatter(|v, _| (2_usize.pow(v as u32)).to_string()),
                 );
@@ -46,6 +53,7 @@ impl UI {
                         .text("Number of splits in the frequencies")
                         .step_by(1f64), // .custom_formatter(|v, _| (2_usize.pow(v as u32)).to_string()),
                 );
+                ui.separator();
                 ui.add(
                     egui::Slider::new(
                         &mut config.viewed_frequencies.value,
@@ -59,8 +67,10 @@ impl UI {
                         .step_by(1f64)
                         .text("Frequencies retained from the analysis (This should be as high as possible)"), // .custom_formatter(|v, _| (2_usize.pow(v as u32)).to_string()),
                 );
+                ui.separator();
+
+                let label = ui.label("Close button");
                 if ui.button("Close").labelled_by(label.id).clicked() {
-                    println!("button clicked");
                     config.open = !config.open;
                 }
             });
@@ -68,7 +78,9 @@ impl UI {
         Ok(())
     }
     pub fn draw_ui(&mut self, canvas: &mut ggez::graphics::Canvas) -> GameResult {
+        // println!("moments before disaster");
         canvas.draw(&self.gui, DrawParam::default().dest(ggez::glam::Vec2::ZERO));
+        // println!("moments after disaster");
         Ok(())
     }
 }
