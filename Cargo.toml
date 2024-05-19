@@ -8,12 +8,13 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.81"
 cpal = "0.15.3"
-egui = "0.27.2"
-ggegui = "0.4.0"
+# egui = "0.27.2"
+ggegui = { git = "https://github.com/JeanNicolasdeLamballerie/ggegui.git" }
 ggez = "0.9.3"
 native-windows-gui = "1.0.13"
 num-integer = "0.1.46"
 spectrum-analyzer = "1.5.0"
+spiral = "0.2.1"
 windows-registry = "0.1.1"
 
 [dependencies.windows]

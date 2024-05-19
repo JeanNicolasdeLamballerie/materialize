@@ -653,30 +653,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03cfe80b1890e1a8cdbffc6044d6872e814aaf6011835a2a5e2db0e5c5c4ef4e"
 
 [[package]]
-name = "ecolor"
-version = "0.27.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20930a432bbd57a6d55e07976089708d4893f3d556cf42a0d79e9e321fa73b10"
-
-[[package]]
 name = "egui"
 version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "180f595432a5b615fc6b74afef3955249b86cfea72607b40740a4cd60d5297d0"
 dependencies = [
  "ahash",
- "epaint 0.26.2",
- "nohash-hasher",
-]
-
-[[package]]
-name = "egui"
-version = "0.27.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "584c5d1bf9a67b25778a3323af222dbe1a1feb532190e103901187f92c7fe29a"
-dependencies = [
- "ahash",
- "epaint 0.27.2",
+ "epaint",
  "nohash-hasher",
 ]
 
@@ -691,12 +674,6 @@ name = "emath"
 version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6916301ecf80448f786cdf3eb51d9dbdd831538732229d49119e2d4312eaaf09"
-
-[[package]]
-name = "emath"
-version = "0.27.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4c3a552cfca14630702449d35f41c84a0d15963273771c6059175a803620f3f"
 
 [[package]]
 name = "encoding_rs"
@@ -715,22 +692,8 @@ checksum = "77b9fdf617dd7f58b0c8e6e9e4a1281f730cde0831d40547da446b2bb76a47af"
 dependencies = [
  "ab_glyph",
  "ahash",
- "ecolor 0.26.2",
- "emath 0.26.2",
- "nohash-hasher",
- "parking_lot",
-]
-
-[[package]]
-name = "epaint"
-version = "0.27.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b381f8b149657a4acf837095351839f32cd5c4aec1817fc4df84e18d76334176"
-dependencies = [
- "ab_glyph",
- "ahash",
- "ecolor 0.27.2",
- "emath 0.27.2",
+ "ecolor",
+ "emath",
  "nohash-hasher",
  "parking_lot",
 ]
@@ -844,10 +807,9 @@ dependencies = [
 [[package]]
 name = "ggegui"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d916636e1c5dd9ba3d0d218ca284c2cfdd59ff2fbd01f9267c050a2c8cd60e41"
+source = "git+https://github.com/JeanNicolasdeLamballerie/ggegui.git#9ba7bdd4df6cc35a593d4415a3fef60ddf3d2271"
 dependencies = [
- "egui 0.26.2",
+ "egui",
  "ggez",
 ]
 
@@ -1439,12 +1401,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cpal",
- "egui 0.27.2",
  "ggegui",
  "ggez",
  "native-windows-gui",
  "num-integer",
  "spectrum-analyzer",
+ "spiral",
  "windows 0.56.0",
  "windows-registry",
 ]
@@ -2391,6 +2353,15 @@ dependencies = [
  "libm 0.2.8",
  "microfft",
  "paste",
+]
+
+[[package]]
+name = "spiral"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f42795bcb3d996b05dcb5c2ff00563f21d78d49585764bef7b26b28468210c0"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
