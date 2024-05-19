@@ -6,4 +6,15 @@
 todo
 # Development tools
 
- ![image](https://raw.githubusercontent.com/JeanNicolasdeLamballerie/materialize/master/.github/images/state-configuration.png =2000x400)
+## State representation :
+
+<picture>
+  <source srcset="https://raw.githubusercontent.com/JeanNicolasdeLamballerie/materialize/master/.github/images/state-configuration.png">
+  <img alt="State representation" src="https://raw.githubusercontent.com/JeanNicolasdeLamballerie/materialize/master/.github/images/state-configuration.png">
+</picture>
+
+## Engine & libraries
+
+- Currently using [ggez](https://ggez.rs/) for rendering (2D game engine).
+- Currently using [egui](https://github.com/emilk/egui) for UI elements (hooked onto ggez).
+- [Cpal](https://github.com/RustAudio/cpal) for audio capture.
