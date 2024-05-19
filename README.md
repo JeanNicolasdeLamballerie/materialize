@@ -6,4 +6,4 @@
 todo
 # Development tools
 
- ![image](/docs/images/state-configuration.png =400x200)
+ ![image](https://raw.githubusercontent.com/JeanNicolasdeLamballerie/materialize/master/.github/images/state-configuration.png =2000x400)
