@@ -5,7 +5,7 @@ use windows_registry::Key;
 use crate::shapes::ShapeKind;
 
 const REGISTRY_PATH_CONFIG: &str = "SOFTWARE\\Dekharen\\materialize_config\\";
-const CONFIG_LIST : &str = "SOFTWARE\\Dekharen\\materialize_config\\list";
+const CONFIG_LIST: &str = "SOFTWARE\\Dekharen\\materialize_config\\list";
 //TODO Add drag and drop for a config file ?
 
 pub enum UpdateStatus {
@@ -14,37 +14,34 @@ pub enum UpdateStatus {
     OlderAlreadyInstalled,
 }
 
-
-
 #[derive(Debug, Clone)]
 pub struct ConfigList(Vec<String>);
-impl ConfigList  {
-pub fn refresh(&mut self){
-    let reg_key=  match windows_registry::CURRENT_USER.create(CONFIG_LIST) {
+impl ConfigList {
+    pub fn refresh(&mut self) {
+        let reg_key = match windows_registry::CURRENT_USER.create(CONFIG_LIST) {
             Err(err) => {
-                eprintln!("{}",err);
+                eprintln!("{}", err);
                 panic!("An error has occured. See above logging.")
-            },
-            Ok(reg) => reg
+            }
+            Ok(reg) => reg,
         };
         self.0 = reg_key.keys().unwrap().collect();
     }
-    pub fn remove(&mut self, name:&str) -> windows_registry::Result<()> {
-    let reg_key =  match windows_registry::CURRENT_USER.create(CONFIG_LIST) {
+    pub fn remove(&mut self, name: &str) -> windows_registry::Result<()> {
+        let reg_key = match windows_registry::CURRENT_USER.create(CONFIG_LIST) {
             Err(err) => {
-                eprintln!("{}",err);
+                eprintln!("{}", err);
                 panic!("An error has occured. See above logging.")
-            },
-            Ok(reg) => reg
+            }
+            Ok(reg) => reg,
         };
-    reg_key.remove_tree(name)
+        reg_key.remove_tree(name)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct GlobalConfiguration {
-
-    pub cfg_list : ConfigList,
+    pub cfg_list: ConfigList,
     pub configuration: Configuration,
     // pub index: u32,
     // pub len: u32,
@@ -53,9 +50,7 @@ pub struct GlobalConfiguration {
 }
 
 impl GlobalConfiguration {
-pub fn rename (&self) {
-
-    }
+    pub fn rename(&self) {}
 }
 
 #[derive(Debug, Clone)]
@@ -64,20 +59,23 @@ pub struct ConfigurationField<T> {
     pub key: String,
 }
 impl<T> ConfigurationField<T> {
-    fn get_key(&self, name : &str) -> windows_registry::Result<Key> {
-    let mut p = path::PathBuf::from(CONFIG_LIST);
+    fn get_key(&self, name: &str) -> windows_registry::Result<Key> {
+        let mut p = path::PathBuf::from(CONFIG_LIST);
         p.push(name);
-        let path = match p.to_str(){
+        let path = match p.to_str() {
             Some(val) => val,
-            _ => panic!("An error occured processing the path to the configuration ! Path value : {} - {}", CONFIG_LIST, name)
+            _ => panic!(
+                "An error occured processing the path to the configuration ! Path value : {} - {}",
+                CONFIG_LIST, name
+            ),
         };
         return windows_registry::CURRENT_USER.create(path); // TODO ADD NAME
     }
 }
 
 trait Access {
-    fn update(&self, key_name:&str) -> windows_registry::Result<()>;
-    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()>;
+    fn update(&self, key_name: &str) -> windows_registry::Result<()>;
+    fn retrieve_from_registry(&mut self, key_name: &str) -> windows_registry::Result<()>;
 }
 // impl<T> Access for ConfigurationField<T> {
 //     fn get_key() {
@@ -85,36 +83,36 @@ trait Access {
 //     }
 // }
 impl Access for ConfigurationField<String> {
-    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+    fn update(&self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         key.set_string(&self.key, &self.value)?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+    fn retrieve_from_registry(&mut self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         self.value = key.get_string(&self.key)?;
         Ok(())
     }
 }
 impl Access for ConfigurationField<u32> {
-    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+    fn update(&self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         key.set_u32(&self.key, self.value)?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+    fn retrieve_from_registry(&mut self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         self.value = key.get_u32(&self.key)?;
         Ok(())
     }
 }
 impl Access for ConfigurationField<f32> {
-    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+    fn update(&self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         key.set_string(&self.key, &self.value.to_string())?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+    fn retrieve_from_registry(&mut self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         self.value = key.get_string(&self.key)?.parse::<f32>().unwrap(); //TODO Needs to throw
                                                                          //error one way or another
@@ -123,7 +121,7 @@ impl Access for ConfigurationField<f32> {
 }
 
 impl Access for ConfigurationField<(f32, f32)> {
-    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+    fn update(&self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         let k1 = self.key.clone() + "_x";
         let k2 = self.key.clone() + "_y";
@@ -133,7 +131,7 @@ impl Access for ConfigurationField<(f32, f32)> {
     }
     /// Forcibly executes and converts f32 into u32 & vice versa.
     /// If you need a specific, actual f32 number, use a string & conversion instead.
-    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+    fn retrieve_from_registry(&mut self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         let k1 = self.key.clone() + "_x";
         let k2 = self.key.clone() + "_y";
@@ -144,7 +142,7 @@ impl Access for ConfigurationField<(f32, f32)> {
     }
 }
 impl Access for ConfigurationField<bool> {
-    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+    fn update(&self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         match self.value {
             true => key.set_u32(&self.key, 1)?,
@@ -152,7 +150,7 @@ impl Access for ConfigurationField<bool> {
         }
         Ok(())
     }
-    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+    fn retrieve_from_registry(&mut self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         let stored = key.get_u32(&self.key)?;
 
@@ -169,12 +167,12 @@ impl Access for ConfigurationField<bool> {
 }
 
 impl Access for ConfigurationField<usize> {
-    fn update(&self, key_name : &str) -> windows_registry::Result<()> {
+    fn update(&self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         key.set_u32(&self.key, self.value as u32)?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self, key_name : &str) -> windows_registry::Result<()> {
+    fn retrieve_from_registry(&mut self, key_name: &str) -> windows_registry::Result<()> {
         let key = self.get_key(key_name)?;
         self.value = key.get_u32(&self.key)? as usize;
         Ok(())
@@ -196,21 +194,21 @@ pub struct Configuration {
     //
 
     // |-----------------------|
-    pub key : String,        //|
+    pub key: String, //|
     // |string --- Unique key ?|
     // |-----------------------|
     // |Needs to be enforced at|
     // |a higher level.        |
     // |-----------------------|
-   pub kind: ShapeKind,
+    pub kind: ShapeKind,
 }
 
 const VERSION: &str = "0.0.1";
 impl Default for Configuration {
     fn default() -> Self {
         Self {
-            kind:ShapeKind::RoundedRectangular,
-            key:String::from("default"),
+            kind: ShapeKind::RoundedRectangular,
+            key: String::from("default"),
             open: false,
             scale: ConfigurationField {
                 value: 100.0,
@@ -281,7 +279,7 @@ impl Configuration {
         number_of_items: u32,
         scale: f32,
         key: String,
-        kind : ShapeKind,
+        kind: ShapeKind,
     ) -> Self {
         let viewed_frequencies = if double_precision {
             polled_frequencies / 2
