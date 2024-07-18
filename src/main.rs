@@ -41,6 +41,7 @@ fn main() -> GameResult {
     };
 
     if status.is_err() {
+        eprintln!("An error occured retrieving the configuration...");
         todo!()
     }
     drop(status);
@@ -52,10 +53,6 @@ fn main() -> GameResult {
     let device = host
         .default_output_device()
         .expect("no output device available");
-    // let devices = host.output_devices().expect("No devices available");
-
-    println!("Main device : {}", device.name().unwrap());
-    // std::thread::sleep(std::time::Duration::from_secs(1));
     let mut supported_configs_range = device
         .supported_output_configs()
         .expect("error while querying configs");

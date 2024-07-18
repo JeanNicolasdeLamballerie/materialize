@@ -40,11 +40,12 @@ pub fn spiraling(len: usize) -> Vec<(f32, f32)> {
     result
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ShapeKind {
     RoundedRectangular,
     Cyclic,
 }
+// impl ShapeKind {}
 
 #[derive(Clone)]
 pub struct Cyclic {}

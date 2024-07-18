@@ -1,15 +1,61 @@
+use std::path;
 // use std::iter::Map;
 use windows_registry::Key;
 
-const REGISTRY_PATH_CONFIG: &str = "SOFTWARE\\Dekharen\\materialize_config\\";
+use crate::shapes::ShapeKind;
 
+const REGISTRY_PATH_CONFIG: &str = "SOFTWARE\\Dekharen\\materialize_config\\";
+const CONFIG_LIST : &str = "SOFTWARE\\Dekharen\\materialize_config\\list";
 //TODO Add drag and drop for a config file ?
-//
 
 pub enum UpdateStatus {
     UpToDate,
     NewerAlreadyInstalled,
     OlderAlreadyInstalled,
+}
+
+
+
+#[derive(Debug, Clone)]
+pub struct ConfigList(Vec<String>);
+impl ConfigList  {
+pub fn refresh(&mut self){
+    let reg_key=  match windows_registry::CURRENT_USER.create(CONFIG_LIST) {
+            Err(err) => {
+                eprintln!("{}",err);
+                panic!("An error has occured. See above logging.")
+            },
+            Ok(reg) => reg
+        };
+        self.0 = reg_key.keys().unwrap().collect();
+    }
+    pub fn remove(&mut self, name:&str) -> windows_registry::Result<()> {
+    let reg_key =  match windows_registry::CURRENT_USER.create(CONFIG_LIST) {
+            Err(err) => {
+                eprintln!("{}",err);
+                panic!("An error has occured. See above logging.")
+            },
+            Ok(reg) => reg
+        };
+    reg_key.remove_tree(name)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GlobalConfiguration {
+
+    pub cfg_list : ConfigList,
+    pub configuration: Configuration,
+    // pub index: u32,
+    // pub len: u32,
+    // pub scale: ConfigurationField<f32>,
+    pub open: bool,
+}
+
+impl GlobalConfiguration {
+pub fn rename (&self) {
+
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -18,14 +64,20 @@ pub struct ConfigurationField<T> {
     pub key: String,
 }
 impl<T> ConfigurationField<T> {
-    fn get_key(&self) -> windows_registry::Result<Key> {
-        return windows_registry::CURRENT_USER.create(REGISTRY_PATH_CONFIG);
+    fn get_key(&self, name : &str) -> windows_registry::Result<Key> {
+    let mut p = path::PathBuf::from(CONFIG_LIST);
+        p.push(name);
+        let path = match p.to_str(){
+            Some(val) => val,
+            _ => panic!("An error occured processing the path to the configuration ! Path value : {} - {}", CONFIG_LIST, name)
+        };
+        return windows_registry::CURRENT_USER.create(path); // TODO ADD NAME
     }
 }
 
 trait Access {
-    fn update(&self) -> windows_registry::Result<()>;
-    fn retrieve_from_registry(&mut self) -> windows_registry::Result<()>;
+    fn update(&self, key_name:&str) -> windows_registry::Result<()>;
+    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()>;
 }
 // impl<T> Access for ConfigurationField<T> {
 //     fn get_key() {
@@ -33,37 +85,37 @@ trait Access {
 //     }
 // }
 impl Access for ConfigurationField<String> {
-    fn update(&self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         key.set_string(&self.key, &self.value)?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         self.value = key.get_string(&self.key)?;
         Ok(())
     }
 }
 impl Access for ConfigurationField<u32> {
-    fn update(&self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         key.set_u32(&self.key, self.value)?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         self.value = key.get_u32(&self.key)?;
         Ok(())
     }
 }
 impl Access for ConfigurationField<f32> {
-    fn update(&self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         key.set_string(&self.key, &self.value.to_string())?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         self.value = key.get_string(&self.key)?.parse::<f32>().unwrap(); //TODO Needs to throw
                                                                          //error one way or another
         Ok(())
@@ -71,8 +123,8 @@ impl Access for ConfigurationField<f32> {
 }
 
 impl Access for ConfigurationField<(f32, f32)> {
-    fn update(&self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         let k1 = self.key.clone() + "_x";
         let k2 = self.key.clone() + "_y";
         key.set_u32(&k1, self.value.0 as u32)?;
@@ -81,8 +133,8 @@ impl Access for ConfigurationField<(f32, f32)> {
     }
     /// Forcibly executes and converts f32 into u32 & vice versa.
     /// If you need a specific, actual f32 number, use a string & conversion instead.
-    fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         let k1 = self.key.clone() + "_x";
         let k2 = self.key.clone() + "_y";
         let v1 = key.get_u32(k1)?;
@@ -92,16 +144,16 @@ impl Access for ConfigurationField<(f32, f32)> {
     }
 }
 impl Access for ConfigurationField<bool> {
-    fn update(&self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn update(&self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         match self.value {
             true => key.set_u32(&self.key, 1)?,
             false => key.set_u32(&self.key, 0)?,
         }
         Ok(())
     }
-    fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn retrieve_from_registry(&mut self, key_name:&str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         let stored = key.get_u32(&self.key)?;
 
         match stored {
@@ -117,13 +169,13 @@ impl Access for ConfigurationField<bool> {
 }
 
 impl Access for ConfigurationField<usize> {
-    fn update(&self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn update(&self, key_name : &str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         key.set_u32(&self.key, self.value as u32)?;
         Ok(())
     }
-    fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
-        let key = self.get_key()?;
+    fn retrieve_from_registry(&mut self, key_name : &str) -> windows_registry::Result<()> {
+        let key = self.get_key(key_name)?;
         self.value = key.get_u32(&self.key)? as usize;
         Ok(())
     }
@@ -141,12 +193,24 @@ pub struct Configuration {
     pub scale: ConfigurationField<f32>,
     pub open: bool,
     // pub terminal_display: bool,
+    //
+
+    // |-----------------------|
+    pub key : String,        //|
+    // |string --- Unique key ?|
+    // |-----------------------|
+    // |Needs to be enforced at|
+    // |a higher level.        |
+    // |-----------------------|
+   pub kind: ShapeKind,
 }
 
 const VERSION: &str = "0.0.1";
 impl Default for Configuration {
     fn default() -> Self {
         Self {
+            kind:ShapeKind::RoundedRectangular,
+            key:String::from("default"),
             open: false,
             scale: ConfigurationField {
                 value: 100.0,
@@ -187,7 +251,7 @@ impl Default for Configuration {
 impl Configuration {
     pub fn status(&self) -> windows_registry::Result<UpdateStatus> {
         let mut default = Configuration::default();
-        default.version.retrieve_from_registry()?;
+        default.version.retrieve_from_registry(&self.key)?;
 
         let stat = match default.version.value {
             stored_version if stored_version < self.version.value => {
@@ -216,6 +280,8 @@ impl Configuration {
         double_precision: bool,
         number_of_items: u32,
         scale: f32,
+        key: String,
+        kind : ShapeKind,
     ) -> Self {
         let viewed_frequencies = if double_precision {
             polled_frequencies / 2
@@ -224,6 +290,8 @@ impl Configuration {
         };
 
         return Self {
+            key,
+            kind,
             open: false,
             scale: ConfigurationField {
                 value: scale,
@@ -267,21 +335,21 @@ impl Configuration {
         self.double_precision.value = !self.double_precision.value;
     }
     pub fn update_to_registry(&mut self) -> windows_registry::Result<()> {
-        self.version.update()?;
-        self.polled_frequencies.update()?;
-        self.viewed_frequencies.update()?;
-        self.screen_size.update()?;
-        self.double_precision.update()?;
-        self.size_arr.update()?;
+        self.version.update(&self.key)?;
+        self.polled_frequencies.update(&self.key)?;
+        self.viewed_frequencies.update(&self.key)?;
+        self.screen_size.update(&self.key)?;
+        self.double_precision.update(&self.key)?;
+        self.size_arr.update(&self.key)?;
         Ok(())
     }
     pub fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
-        self.version.retrieve_from_registry()?;
-        self.polled_frequencies.retrieve_from_registry()?;
-        self.viewed_frequencies.retrieve_from_registry()?;
-        self.screen_size.retrieve_from_registry()?;
-        self.double_precision.retrieve_from_registry()?;
-        self.size_arr.retrieve_from_registry()?;
+        self.version.retrieve_from_registry(&self.key)?;
+        self.polled_frequencies.retrieve_from_registry(&self.key)?;
+        self.viewed_frequencies.retrieve_from_registry(&self.key)?;
+        self.screen_size.retrieve_from_registry(&self.key)?;
+        self.double_precision.retrieve_from_registry(&self.key)?;
+        self.size_arr.retrieve_from_registry(&self.key)?;
         Ok(())
     }
     pub fn set(&self) -> windows_registry::Result<()> {
