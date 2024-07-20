@@ -19,7 +19,7 @@ use ggez::graphics::{self, Color, DrawMode, FillOptions, Text};
 use ggez::{event, ContextBuilder};
 use ggez::{Context, GameResult};
 
-use crate::config::{ GlobalConfiguration, UpdateStatus};
+use crate::config::{GlobalConfiguration, UpdateStatus};
 use crate::shapes::{spiraling, Shape};
 fn main() -> GameResult {
     let mut global_config = GlobalConfiguration::default();
@@ -66,7 +66,10 @@ fn main() -> GameResult {
     let err_fn = move |err| {
         eprintln!("an error occurred on stream: {}", err);
     };
-    println!("The sampling format for the configuration is {:?}.", config.sample_format());
+    println!(
+        "The sampling format for the configuration is {:?}.",
+        config.sample_format()
+    );
     let stream = match config.sample_format() {
         cpal::SampleFormat::U8 => device.build_input_stream(
             &config.into(),
@@ -232,7 +235,11 @@ impl MainState {
 }
 
 impl event::EventHandler<ggez::GameError> for MainState {
-    fn text_input_event(&mut self, _ctx: &mut Context, character: char) -> Result<(), ggez::GameError> {
+    fn text_input_event(
+        &mut self,
+        _ctx: &mut Context,
+        character: char,
+    ) -> Result<(), ggez::GameError> {
         self.ui.gui.input.text_input_event(character);
         Ok(())
     }
@@ -284,7 +291,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
         self.sample();
         let mut i = 0;
         //  let spiral_iter = spiral::ManhattanIterator::new(self.configuration.screen_size.0/2, self.configuration.screen_size.1/2, );
-        let  config = &self.g_config.configuration;
+        let config = &self.g_config.configuration;
         if !self.g_config.open {
             let version = String::from("v.") + &*config.version.value;
             let vers = Text::new(version);
@@ -293,19 +300,16 @@ impl event::EventHandler<ggez::GameError> for MainState {
         if self.counter.len() < config.number_of_items.value as usize {
             let mut fill = vec![
                 (1.0f32, 1.0f32, 1.0f32);
-                config.number_of_items.value as usize
-                    - self.counter.len()
+                config.number_of_items.value as usize - self.counter.len()
             ];
             self.counter.append(&mut fill);
             drop(fill);
         } else if self.counter.len() > config.number_of_items.value as usize {
-            self.counter
-                .truncate(config.number_of_items.value as usize);
-            self.values
-                .truncate(config.number_of_items.value as usize);
+            self.counter.truncate(config.number_of_items.value as usize);
+            self.values.truncate(config.number_of_items.value as usize);
             //    self.counter = c;
         }
-        let shape =  shapes::ShapeBuilder::new(config.kind.clone());
+        let shape = shapes::ShapeBuilder::new(config.kind.clone());
         let spiral_values = spiraling(self.values.len());
         let mut spiral = spiral_values.iter();
         for frequency in &self.values {

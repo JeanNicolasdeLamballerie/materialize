@@ -41,7 +41,7 @@ impl UI {
                 if g_config.cfg_list_open {
                     egui::SidePanel::right("profile_selector").show(&gui_ctx, |panel_ui| {
                      for  value in g_config.cfg_list.values().iter() {
-                        panel_ui.add(egui::Button::new(value)); 
+                        panel_ui.add(egui::Button::new(value));
                      panel_ui.separator();
                         }
                      panel_ui.add(egui::TextEdit::singleline(&mut g_config.new_profile_name));
@@ -56,7 +56,6 @@ impl UI {
                 };
             let mut key_name : &str = &(String::from("Selected profile : ") + &g_config.configuration.key);
             ui.add(egui::TextEdit::singleline(&mut key_name));
-            
                if ui.add(egui::Button::new("Select Shape")).clicked() {
                 g_config.shape_list_open = !g_config.shape_list_open;
                 };
@@ -65,7 +64,7 @@ impl UI {
                      for  value in ShapeKind::iterator() {
                        if panel_ui.add(egui::Button::new(value.to_str())).clicked(){
                                 g_config.configuration.kind = value.clone();
-                            }; 
+                            };
                      panel_ui.separator();
                         }
                     });

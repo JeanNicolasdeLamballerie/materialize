@@ -50,9 +50,9 @@ pub struct GlobalConfiguration {
     // pub len: u32,
     // pub scale: ConfigurationField<f32>,
     pub open: bool,
-    pub cfg_list_open : bool,
-    pub new_profile_name : String,
-    pub shape_list_open : bool,
+    pub cfg_list_open: bool,
+    pub new_profile_name: String,
+    pub shape_list_open: bool,
 }
 
 impl GlobalConfiguration {
@@ -60,19 +60,18 @@ impl GlobalConfiguration {
 }
 
 impl Default for GlobalConfiguration {
-   fn default() -> Self {
+    fn default() -> Self {
         let mut list = ConfigList(Vec::new());
         list.refresh();
         Self {
-            cfg_list:list,
-            configuration : Configuration::default(),
-            open:false,
-            cfg_list_open:false,
-            shape_list_open:false,
-            new_profile_name : String::from("New Profile"),
+            cfg_list: list,
+            configuration: Configuration::default(),
+            open: false,
+            cfg_list_open: false,
+            shape_list_open: false,
+            new_profile_name: String::from("New Profile"),
         }
-    
-}
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -286,7 +285,7 @@ impl Configuration {
     //     return windows_registry::CURRENT_USER.create(REGISTRY_PATH_CONFIG);
     // }
     //
-//TODO UPDATE THIS FUNCTION TO LOOKUP ACTUAL PATH
+    //TODO UPDATE THIS FUNCTION TO LOOKUP ACTUAL PATH
     pub fn exists(&self) -> bool {
         match windows_registry::CURRENT_USER.open(REGISTRY_PATH_CONFIG) {
             Ok(_) => return true,
@@ -354,10 +353,10 @@ impl Configuration {
         self.double_precision.value = !self.double_precision.value;
     }
     pub fn update_to_registry(&mut self) -> windows_registry::Result<()> {
-        let kind =self.kind.to_str();
+        let kind = self.kind.to_str();
         let field = ConfigurationField {
-            key:String::from("kind"),
-            value:String::from(kind),
+            key: String::from("kind"),
+            value: String::from(kind),
         };
         field.update(&self.key)?;
         self.version.update(&self.key)?;
@@ -371,8 +370,8 @@ impl Configuration {
     pub fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
         let kind = self.kind.to_str();
         let mut field = ConfigurationField {
-            key:String::from("kind"),
-            value:String::from(kind),
+            key: String::from("kind"),
+            value: String::from(kind),
         };
         field.retrieve_from_registry(&self.key)?;
         self.kind = ShapeKind::from_str(&field.value);

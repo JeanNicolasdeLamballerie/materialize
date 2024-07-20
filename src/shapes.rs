@@ -46,11 +46,11 @@ pub enum ShapeKind {
     Cyclic,
 }
 impl ShapeKind {
-    pub fn iterator() ->  std::slice::Iter<'static, ShapeKind> {
-        static SHAPE_KINDS : [ShapeKind;2] = [ShapeKind::RoundedRectangular, ShapeKind::Cyclic];
+    pub fn iterator() -> std::slice::Iter<'static, ShapeKind> {
+        static SHAPE_KINDS: [ShapeKind; 2] = [ShapeKind::RoundedRectangular, ShapeKind::Cyclic];
         SHAPE_KINDS.iter()
     }
-   pub fn from_str(string: &str) -> Self {
+    pub fn from_str(string: &str) -> Self {
         match string {
             "cyclic" => ShapeKind::Cyclic,
             "rounded_rectangular" => ShapeKind::RoundedRectangular,
@@ -60,7 +60,7 @@ impl ShapeKind {
             }
         }
     }
-   pub fn to_str(&self) -> &str {
+    pub fn to_str(&self) -> &str {
         match self {
             ShapeKind::Cyclic => "cyclic",
             ShapeKind::RoundedRectangular => "rounded_rectangular",
