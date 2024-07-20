@@ -19,36 +19,32 @@ use ggez::graphics::{self, Color, DrawMode, FillOptions, Text};
 use ggez::{event, ContextBuilder};
 use ggez::{Context, GameResult};
 
-use crate::config::{Configuration, UpdateStatus};
-use crate::shapes::{spiraling, Shape, ShapeKind};
-// const VIEWED_FREQUENCIES: u32 = 2000;
+use crate::config::{ GlobalConfiguration, UpdateStatus};
+use crate::shapes::{spiraling, Shape};
 fn main() -> GameResult {
-    let mut global_config = Configuration::default();
-    let status = if global_config.exists() {
-        match global_config.status() {
+    let mut global_config = GlobalConfiguration::default();
+    let status = if global_config.configuration.exists() {
+        match global_config.configuration.status() {
             Ok(status) => match status {
-                UpdateStatus::UpToDate => global_config.retrieve_from_registry(),
+                UpdateStatus::UpToDate => global_config.configuration.retrieve_from_registry(),
                 // DataStatus::NewerAlreadyInstalled => config.retrieve_from_registry(),
                 _ => todo!(),
             },
             Err(err) => {
                 println!("Error accessing the config : {} ", err);
-                global_config.update_to_registry()
+                global_config.configuration.update_to_registry()
             }
         }
     } else {
-        global_config.update_to_registry()
+        global_config.configuration.update_to_registry()
     };
 
     if status.is_err() {
         eprintln!("An error occured retrieving the configuration...");
-        todo!()
+        println!("error : {}", status.as_ref().unwrap_err());
+        // todo!()
     }
     drop(status);
-    // match Configuration::access() {
-    //     Ok(()) => println!("Success."),
-    //     Err(err) => println!("err : {}", err.to_string()),
-    // };
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -70,7 +66,7 @@ fn main() -> GameResult {
     let err_fn = move |err| {
         eprintln!("an error occurred on stream: {}", err);
     };
-    println!("{:?}", config.sample_format());
+    println!("The sampling format for the configuration is {:?}.", config.sample_format());
     let stream = match config.sample_format() {
         cpal::SampleFormat::U8 => device.build_input_stream(
             &config.into(),
@@ -109,7 +105,7 @@ fn main() -> GameResult {
                 "An error occured trying to parse the sample format {}",
                 sample_format
             );
-            sleep(time::Duration::from_secs(20));
+            sleep(time::Duration::from_secs(15));
             panic!("Unsupported sample format {sample_format}")
         }
     }
@@ -119,16 +115,14 @@ fn main() -> GameResult {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 
-    // let screen_size = (720., 720.);
-    // let fps = 20;
     let cb = ContextBuilder::new("Materialize", "Dekharen").window_mode(
         ggez::conf::WindowMode {
             transparent: false,
             visible: true,
             resize_on_scale_factor_change: true,
             logical_size: None,
-            width: global_config.screen_size.value.0,
-            height: global_config.screen_size.value.1,
+            width: global_config.configuration.screen_size.value.0,
+            height: global_config.configuration.screen_size.value.1,
             maximized: false,
             fullscreen_type: ggez::conf::FullscreenType::Windowed,
             borderless: true,
@@ -141,7 +135,6 @@ fn main() -> GameResult {
     );
     let (mut ctx, event_loop) = cb.build()?; // `?` because the build function may fail
     ctx.gfx.set_window_title("Materialize");
-    // println!("Main device : {}", device.name().unwrap());
     let state = MainState::new(
         &mut ctx,
         sample_rate,
@@ -166,7 +159,7 @@ where
 
 // TODO type archmutex data ?
 struct MainState {
-    configuration: Configuration,
+    g_config: GlobalConfiguration,
     values: Vec<Vec<f32>>,
     reader: Arc<Mutex<DataCollected>>,
     sample_rate: SampleRate,
@@ -179,13 +172,13 @@ impl MainState {
         ctx: &mut Context,
         sample_rate: SampleRate,
         values: Vec<Vec<f32>>,
-        configuration: Configuration,
+        g_config: GlobalConfiguration,
         reader: Arc<Mutex<DataCollected>>,
     ) -> Self {
-        let number_of_items = configuration.number_of_items.value;
+        let number_of_items = g_config.configuration.number_of_items.value;
         MainState {
             ui: UI::new(ctx),
-            configuration,
+            g_config,
             sample_rate,
             reader,
             values,
@@ -196,17 +189,17 @@ impl MainState {
 
     fn sample(&mut self) {
         let mut guard = self.reader.lock().unwrap();
-        if guard.points.len() < self.configuration.size_arr.value {
+        if guard.points.len() < self.g_config.configuration.size_arr.value {
             return;
         }
         let pts = guard.points.clone();
-        let windowed_values = hann_window(&pts[..self.configuration.size_arr.value]);
-        let (_, remain) = pts.split_at(self.configuration.size_arr.value / 2);
+        let windowed_values = hann_window(&pts[..self.g_config.configuration.size_arr.value]);
+        let (_, remain) = pts.split_at(self.g_config.configuration.size_arr.value / 2);
         guard.points = remain.to_vec();
         let spectrum_frequencies = samples_fft_to_spectrum(
             &windowed_values,
             self.sample_rate.0,
-            FrequencyLimit::Max(self.configuration.polled_frequencies.value as f32),
+            FrequencyLimit::Max(self.g_config.configuration.polled_frequencies.value as f32),
             // Recommended scaling/normalization by `rustfft`.
             Some(&divide_by_N_sqrt),
         )
@@ -216,11 +209,11 @@ impl MainState {
         self.values = vector_spectrum;
     }
     fn map_to_representation(&self, map: &std::collections::BTreeMap<u32, f32>) -> Vec<Vec<f32>> {
-        let len = &self.configuration.number_of_items.value;
+        let len = &self.g_config.configuration.number_of_items.value;
         let mut index = 0;
         let usize_len = *len as usize;
         let mut vector = vec![vec![0.0]; usize_len];
-        let chunk_s = self.configuration.viewed_frequencies.value / len;
+        let chunk_s = self.g_config.configuration.viewed_frequencies.value / len;
 
         for (&key, value) in map.iter() {
             if key >= (index + 1) as u32 * chunk_s {
@@ -239,10 +232,14 @@ impl MainState {
 }
 
 impl event::EventHandler<ggez::GameError> for MainState {
+    fn text_input_event(&mut self, _ctx: &mut Context, character: char) -> Result<(), ggez::GameError> {
+        self.ui.gui.input.text_input_event(character);
+        Ok(())
+    }
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         self.pos_x = self.pos_x + 2.0;
-        if !self.configuration.open {
-            self.ui.update_menu(ctx, &mut self.configuration)?;
+        if !self.g_config.open {
+            self.ui.update_menu(ctx, &mut self.g_config)?;
         }
         // let win = ctx.gfx.window();
         // win.set_inner_size(PhysicalSize::new(200, 200));
@@ -257,7 +254,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
         match input.keycode {
             Some(key) => match key {
                 ggez::input::keyboard::KeyCode::Space => {
-                    self.configuration.open = !self.configuration.open;
+                    self.g_config.open = !self.g_config.open;
                     Ok(())
                 }
                 ggez::input::keyboard::KeyCode::Escape => {
@@ -287,27 +284,28 @@ impl event::EventHandler<ggez::GameError> for MainState {
         self.sample();
         let mut i = 0;
         //  let spiral_iter = spiral::ManhattanIterator::new(self.configuration.screen_size.0/2, self.configuration.screen_size.1/2, );
-        if !self.configuration.open {
-            let version = String::from("v.") + &*self.configuration.version.value;
+        let  config = &self.g_config.configuration;
+        if !self.g_config.open {
+            let version = String::from("v.") + &*config.version.value;
             let vers = Text::new(version);
             canvas.draw(&vers, [0.0, 0.0]);
         }
-        if self.counter.len() < self.configuration.number_of_items.value as usize {
+        if self.counter.len() < config.number_of_items.value as usize {
             let mut fill = vec![
                 (1.0f32, 1.0f32, 1.0f32);
-                self.configuration.number_of_items.value as usize
+                config.number_of_items.value as usize
                     - self.counter.len()
             ];
             self.counter.append(&mut fill);
             drop(fill);
-        } else if self.counter.len() > self.configuration.number_of_items.value as usize {
+        } else if self.counter.len() > config.number_of_items.value as usize {
             self.counter
-                .truncate(self.configuration.number_of_items.value as usize);
+                .truncate(config.number_of_items.value as usize);
             self.values
-                .truncate(self.configuration.number_of_items.value as usize);
+                .truncate(config.number_of_items.value as usize);
             //    self.counter = c;
         }
-        let shape = shapes::ShapeBuilder::new(ShapeKind::Cyclic);
+        let shape =  shapes::ShapeBuilder::new(config.kind.clone());
         let spiral_values = spiraling(self.values.len());
         let mut spiral = spiral_values.iter();
         for frequency in &self.values {
@@ -316,10 +314,10 @@ impl event::EventHandler<ggez::GameError> for MainState {
             let (x, y) = spiral.next().unwrap_or(&default_pos);
             let iter = frequency.iter();
             let mut sum = iter.fold(0_f32, |x, &x2| x + x2);
-            sum = sum * self.configuration.scale.value;
+            sum = sum * config.scale.value;
 
-            if sum > self.configuration.screen_size.value.1 - 50.0 {
-                sum = self.configuration.screen_size.value.1 - 50.0
+            if sum > config.screen_size.value.1 - 50.0 {
+                sum = config.screen_size.value.1 - 50.0
             }
             self.counter[i].0 = sum;
 
@@ -349,8 +347,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
                     mode,
                     color,
                     (
-                        self.configuration.screen_size.value.0 / 2.0 + x,
-                        self.configuration.screen_size.value.1 / 2.0 + y,
+                        config.screen_size.value.0 / 2.0 + x,
+                        config.screen_size.value.1 / 2.0 + y,
                     ),
                     (self.counter[i].1, self.counter[i].2),
                     &mut canvas,
@@ -400,7 +398,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
         // )?;
         // canvas.draw(&pt, Vec2::new(self.pos_x, 380.0));
         // }
-        if !self.configuration.open {
+        if !self.g_config.open {
             self.ui.draw_ui(&mut canvas)?;
         }
         canvas.finish(ctx)?;

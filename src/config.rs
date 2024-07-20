@@ -27,6 +27,9 @@ impl ConfigList {
         };
         self.0 = reg_key.keys().unwrap().collect();
     }
+    pub fn values(&self) -> Vec<String> {
+        return self.0.clone();
+    }
     pub fn remove(&mut self, name: &str) -> windows_registry::Result<()> {
         let reg_key = match windows_registry::CURRENT_USER.create(CONFIG_LIST) {
             Err(err) => {
@@ -47,10 +50,29 @@ pub struct GlobalConfiguration {
     // pub len: u32,
     // pub scale: ConfigurationField<f32>,
     pub open: bool,
+    pub cfg_list_open : bool,
+    pub new_profile_name : String,
+    pub shape_list_open : bool,
 }
 
 impl GlobalConfiguration {
     pub fn rename(&self) {}
+}
+
+impl Default for GlobalConfiguration {
+   fn default() -> Self {
+        let mut list = ConfigList(Vec::new());
+        list.refresh();
+        Self {
+            cfg_list:list,
+            configuration : Configuration::default(),
+            open:false,
+            cfg_list_open:false,
+            shape_list_open:false,
+            new_profile_name : String::from("New Profile"),
+        }
+    
+}
 }
 
 #[derive(Debug, Clone)]
@@ -189,7 +211,6 @@ pub struct Configuration {
     pub double_precision: ConfigurationField<bool>,
     pub number_of_items: ConfigurationField<u32>,
     pub scale: ConfigurationField<f32>,
-    pub open: bool,
     // pub terminal_display: bool,
     //
 
@@ -209,7 +230,6 @@ impl Default for Configuration {
         Self {
             kind: ShapeKind::RoundedRectangular,
             key: String::from("default"),
-            open: false,
             scale: ConfigurationField {
                 value: 100.0,
                 key: "scale".to_string(),
@@ -265,6 +285,8 @@ impl Configuration {
     // fn get_key(&self) -> windows_registry::Result<Key> {
     //     return windows_registry::CURRENT_USER.create(REGISTRY_PATH_CONFIG);
     // }
+    //
+//TODO UPDATE THIS FUNCTION TO LOOKUP ACTUAL PATH
     pub fn exists(&self) -> bool {
         match windows_registry::CURRENT_USER.open(REGISTRY_PATH_CONFIG) {
             Ok(_) => return true,
@@ -290,7 +312,6 @@ impl Configuration {
         return Self {
             key,
             kind,
-            open: false,
             scale: ConfigurationField {
                 value: scale,
                 key: "scale".to_string(),
@@ -333,6 +354,12 @@ impl Configuration {
         self.double_precision.value = !self.double_precision.value;
     }
     pub fn update_to_registry(&mut self) -> windows_registry::Result<()> {
+        let kind =self.kind.to_str();
+        let field = ConfigurationField {
+            key:String::from("kind"),
+            value:String::from(kind),
+        };
+        field.update(&self.key)?;
         self.version.update(&self.key)?;
         self.polled_frequencies.update(&self.key)?;
         self.viewed_frequencies.update(&self.key)?;
@@ -342,6 +369,13 @@ impl Configuration {
         Ok(())
     }
     pub fn retrieve_from_registry(&mut self) -> windows_registry::Result<()> {
+        let kind = self.kind.to_str();
+        let mut field = ConfigurationField {
+            key:String::from("kind"),
+            value:String::from(kind),
+        };
+        field.retrieve_from_registry(&self.key)?;
+        self.kind = ShapeKind::from_str(&field.value);
         self.version.retrieve_from_registry(&self.key)?;
         self.polled_frequencies.retrieve_from_registry(&self.key)?;
         self.viewed_frequencies.retrieve_from_registry(&self.key)?;

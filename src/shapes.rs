@@ -45,7 +45,29 @@ pub enum ShapeKind {
     RoundedRectangular,
     Cyclic,
 }
-// impl ShapeKind {}
+impl ShapeKind {
+    pub fn iterator() ->  std::slice::Iter<'static, ShapeKind> {
+        static SHAPE_KINDS : [ShapeKind;2] = [ShapeKind::RoundedRectangular, ShapeKind::Cyclic];
+        SHAPE_KINDS.iter()
+    }
+   pub fn from_str(string: &str) -> Self {
+        match string {
+            "cyclic" => ShapeKind::Cyclic,
+            "rounded_rectangular" => ShapeKind::RoundedRectangular,
+            _ => {
+                eprintln!("Warning : the string provided in the options did not match any known shape kind. Your register might be corrupted : {}", string);
+                return ShapeKind::RoundedRectangular;
+            }
+        }
+    }
+   pub fn to_str(&self) -> &str {
+        match self {
+            ShapeKind::Cyclic => "cyclic",
+            ShapeKind::RoundedRectangular => "rounded_rectangular",
+            // _ => "unknown",
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Cyclic {}
